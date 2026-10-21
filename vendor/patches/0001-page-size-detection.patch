@@ -1,0 +1,82 @@
+diff -ruN a/src/main.cc b/src/main.cc
+--- a/src/main.cc	2026-10-21 09:18:06
++++ b/src/main.cc	2026-10-21 09:18:06
+@@ -21,6 +21,7 @@
+ #include <fcntl.h>
+ #include <cups/raster.h>
+ #include <algorithm>
++#include <cmath>
+ #include <functional>
+ #include <string>
+ #include <array>
+@@ -86,6 +87,48 @@
+   return result;
+ }
+ 
++// Paper geometry in PostScript points, used to recover the size when the
++// raster header carries no usable cupsPageSizeName.
++struct paper_dimensions {
++  const char *pjl_name;
++  double width;
++  double height;
++};
++
++static const paper_dimensions paper_table[] = {
++  { "A4",        595, 842 },
++  { "A5",        420, 595 },
++  { "A6",        297, 420 },
++  { "B5",        516, 729 },
++  { "B6",        363, 516 },
++  { "C5",        459, 649 },
++  { "DL",        312, 624 },
++  { "MONARCH",   279, 540 },
++  { "EXECUTIVE", 522, 756 },
++  { "LEGAL",     612, 1008 },
++  { "LETTER",    612, 792 },
++};
++
++// Tolerance absorbs the point-to-pixel rounding done upstream. Two points is
++// enough for integer rounding and tight enough that distinct media such as
++// 4x6in (288x432) do not snap onto A6 (297x420).
++static std::string detect_paper_size(double width, double height) {
++  if (!std::isfinite(width) || !std::isfinite(height))
++    return "";
++  if (width <= 0 || height <= 0)
++    return "";
++  const double tolerance = 2.0;
++  for (const auto &paper : paper_table) {
++    bool portrait = std::fabs(width - paper.width) <= tolerance &&
++                    std::fabs(height - paper.height) <= tolerance;
++    bool landscape = std::fabs(width - paper.height) <= tolerance &&
++                     std::fabs(height - paper.width) <= tolerance;
++    if (portrait || landscape)
++      return paper.pjl_name;
++  }
++  return "";
++}
++
+ page_params build_page_params(const cups_page_header2_t &header) {
+   static const std::array<std::string, 6> sources = {{
+     "AUTO", "T1", "T2", "T3", "MP", "MANUAL"
+@@ -118,10 +161,18 @@
+     p.sourcetray = sources[0];
+ 
+   auto size_it = sizes.find(header.cupsPageSizeName);
+-  if (size_it != sizes.end())
++  if (size_it != sizes.end()) {
+     p.papersize = size_it->second;
+-  else
+-    p.papersize = "A4";
++  } else {
++    // Applications routinely send page geometry without a recognised size
++    // name. Trust the geometry instead of silently printing on A4. Try the
++    // float fields first, then the integer fields, before giving up.
++    std::string detected = detect_paper_size(header.cupsPageSize[0],
++                                             header.cupsPageSize[1]);
++    if (detected.empty())
++      detected = detect_paper_size(header.PageSize[0], header.PageSize[1]);
++    p.papersize = detected.empty() ? "A4" : detected;
++  }
+ 
+   return p;
+ }

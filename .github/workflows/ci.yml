@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          clang --version
+          cmake --version
+          ppdc --version || true
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Assert arm64 only
+        run: |
+          archs=$(lipo -archs out/rastertobrlaser)
+          echo "arch: $archs"
+          test "$archs" = "arm64"
+
+      - name: Test
+        run: ./test.sh
+
+      - name: Check scripts parse
+        run: |
+          for f in build.sh install.sh uninstall.sh migrate.sh test.sh; do
+            bash -n "$f"
+          done

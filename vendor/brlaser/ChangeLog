@@ -1,0 +1,23 @@
+brlaser v6 (2019-09-22)
+    Added support for some more Brother HL-series printers. These printers
+      had glitched output in earlier releases.
+
+brlaser v5 (2019-05-18)
+    Fixed problems with Brother HL-series printers in 600 dpi mode. Thanks
+      to Onno Kortmann for the fix.
+    Added several printers.
+
+brlaser v4 (2018-02-25)
+    Added several printers.
+    Merged duplex printing support from @xc-racer99. Enabled for DCP-7065DN.
+    Switched to a CMake build system.
+
+brlaser v3 (2014-07-07)
+    Added DCP-7065DN description.
+
+brlaser v2 (2014-06-29)
+    Suppport compilation with GCC 4.6.
+    Add a basic test suite.
+
+brlaser v1 (2013-12-30)
+    Initial release.

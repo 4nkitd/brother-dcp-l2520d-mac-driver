@@ -17,7 +17,8 @@ QUEUE="${QUEUE:-Brother_DCP_L2520D_series}"
 MODEL_MATCH="${MODEL_MATCH:-direct usb://Brother/DCP-L2520D}"
 DEST=/Library/Printers/brlaser
 FILTER="$DEST/filter/rastertobrlaser"
-PPD_SRC="out/brl2520d.ppd"
+BUILD_DIR="${BUILD_DIR:-out}"
+PPD_SRC="$BUILD_DIR/brl2520d.ppd"
 PPD_DEST="$DEST/ppd/brl2520d.ppd"
 BACKUP_DIR="$DEST/backup"
 STATE_FILE="$BACKUP_DIR/queue-$QUEUE.state"
@@ -30,10 +31,10 @@ say() { echo; echo "== $* =="; }
 
 say "Preflight"
 
-[ -x out/rastertobrlaser ] || die "No filter built. Run ./build.sh first."
+[ -x "$BUILD_DIR/rastertobrlaser" ] || die "No filter at $BUILD_DIR/rastertobrlaser. Run ./build.sh first."
 [ -f "$PPD_SRC" ]          || die "No PPD built. Run ./build.sh first."
 
-archs=$(lipo -archs out/rastertobrlaser)
+archs=$(lipo -archs "$BUILD_DIR/rastertobrlaser")
 [ "$archs" = "arm64" ] || die "Filter is '$archs', expected arm64 only."
 
 grep -Fq "$FILTER" "$PPD_SRC" \
@@ -94,7 +95,7 @@ trap 'rc=$?; if [ $rc -ne 0 ]; then rollback; fi; exit $rc' EXIT
 
 say "Installing filter"
 mkdir -p "$DEST/filter" "$DEST/ppd"
-install -m 755 out/rastertobrlaser "$FILTER"
+install -m 755 "$BUILD_DIR/rastertobrlaser" "$FILTER"
 install -m 644 "$PPD_SRC" "$PPD_DEST"
 echo "   $FILTER"
 

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
 # Technical notes
 
 For people maintaining, auditing, or rebuilding this driver.

@@ -184,8 +184,14 @@ has no paper-width sensor. Set the tray size on the printer's panel.
 
 ## License
 
-GNU General Public License, version 2 or later. See `LICENSE`.
+The project as a whole is **GNU General Public License, version 3 or later**. See
+`LICENSE`.
 
-This project is a derivative work of brlaser; see `NOTICE.md` for attribution,
-the vendored commit, and the local patch. Redistributing a built binary requires
-making the corresponding source available.
+Original scripts and tools here are **MIT** (`LICENSE-MIT`); they carry an
+`SPDX-License-Identifier: MIT` header. The driver cannot be MIT: it contains
+brlaser code, which is GPL-2.0-or-later, and GPL-3.0 is reachable through
+brlaser's "or later" grant.
+
+See `NOTICE.md` for attribution, the vendored commit, and the local patch.
+Redistributing a built binary requires making the corresponding source
+available.

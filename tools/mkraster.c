@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Minimal CUPS raster generator for tests: writes one 1-bit page with a
 // chosen size name and geometry so page-size detection can be exercised.
 //

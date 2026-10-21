@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
 # Round-trip and page-size tests for the native arm64 filter.
 # Exercises the encoder without touching hardware.
 set -euo pipefail

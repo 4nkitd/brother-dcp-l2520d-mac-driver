@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
 # Remove the native driver and put the queue back the way it was.
 #
 #   sudo ./uninstall.sh

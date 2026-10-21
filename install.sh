@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
 # Install the native arm64 filter for the Brother DCP-L2520D.
 #
 #   sudo ./install.sh

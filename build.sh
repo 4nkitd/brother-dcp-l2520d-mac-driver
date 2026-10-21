@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
 # Build the native arm64 Brother DCP-L2520D CUPS filter from vendored brlaser.
 set -euo pipefail
 

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
 # Cutover: install the native filter, prove a real queue print works, and only
 # then remove Brother's Intel (Rosetta) driver.
 #

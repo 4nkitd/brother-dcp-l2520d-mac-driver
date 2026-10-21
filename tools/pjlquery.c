@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 // Diagnostic: send one PJL query over the printer's USB interface and print the
 // reply, so we can see what the device reports about itself.
 //

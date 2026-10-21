@@ -1,5 +1,6 @@
 #!/bin/bash
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Ankit Dagar
 # Remove the native driver and put the queue back the way it was.
 #
 #   sudo ./uninstall.sh

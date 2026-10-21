@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Ankit Dagar
 // Diagnostic: send one PJL query over the printer's USB interface and print the
 // reply, so we can see what the device reports about itself.
 //

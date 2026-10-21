@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Ankit Dagar
 // Minimal CUPS raster generator for tests: writes one 1-bit page with a
 // chosen size name and geometry so page-size detection can be exercised.
 //

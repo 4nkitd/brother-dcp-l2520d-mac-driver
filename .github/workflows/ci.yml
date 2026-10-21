@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 name: CI
 
 on:
@@ -33,3 +34,17 @@ jobs:
           for f in build.sh install.sh uninstall.sh migrate.sh test.sh; do
             bash -n "$f"
           done
+
+      - name: Check license headers
+        run: |
+          missing=0
+          for f in $(git ls-files | grep -v '^vendor/'); do
+            case "$f" in
+              LICENSE|README.md|NOTICE.md|CHANGELOG.md|VERSION|\
+              vendor/*|.gitignore) continue ;;
+            esac
+            grep -q "SPDX-License-Identifier: GPL-3.0-or-later" "$f" || {
+              echo "missing SPDX header: $f"; missing=1
+            }
+          done
+          exit $missing

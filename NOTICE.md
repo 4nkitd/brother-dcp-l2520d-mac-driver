@@ -1,37 +1,21 @@
 # Licensing and third-party attribution
 
-This repository mixes original code with a vendored, patched upstream project.
-The two carry different licenses, so read this before redistributing.
+## License
 
-## Summary
+This repository is distributed under the **GNU General Public License, version 3
+or later**. See `LICENSE`. Every file in this repository that is not vendored
+carries an `SPDX-License-Identifier: GPL-3.0-or-later` header.
 
-| Part | License |
-| --- | --- |
-| `build.sh`, `install.sh`, `uninstall.sh`, `migrate.sh`, `test.sh` | MIT |
-| `tools/mkraster.c`, `tools/pjlquery.c` | MIT |
-| `vendor/brlaser/` | GPL-2.0-or-later, © 2013 Peter De Wachter and contributors |
-| `vendor/patches/` | GPL-2.0-or-later (derivative of brlaser) |
-| Generated PPD (`brl2520d.ppd`) | GPL-2.0-or-later (derived from `brlaser.drv.in`) |
-| Built `rastertobrlaser` binary | GPL-2.0-or-later (contains brlaser code) |
-| The repository as a whole | GPL-3.0-or-later |
+## Why GPL-3.0 and not a permissive license
 
-Original files carry an `SPDX-License-Identifier: MIT` header. Vendored files keep
-their upstream headers unchanged.
+The printed output is produced by a filter binary that contains brlaser code, so
+the binary is a derivative work of a GPL project and cannot be released under
+MIT or any other permissive license. There is no way to ship a working driver
+permissively without replacing brlaser entirely.
 
-## Why the whole project is GPL-3.0-or-later
-
-The printed output is produced by a filter binary that contains brlaser code. That
-makes the binary a derivative work, so it cannot be distributed under MIT. There
-is no way to ship a working driver under a permissive license without replacing
-brlaser entirely.
-
-GPL-3.0 is available because brlaser grants "version 2 of the License, or (at your
-option) any later version". Upgrading to version 3 is therefore permitted by the
-upstream grant itself. `vendor/brlaser/` keeps its original GPL-2.0-or-later
-notices; nothing upstream was relicensed.
-
-The MIT-licensed scripts and tools are GPL-compatible, so the combined
-distribution can be conveyed under GPL-3.0-or-later without any conflict.
+GPL-3.0 is available because brlaser grants "version 2 of the License, or (at
+your option) any later version". Upgrading to version 3 is therefore permitted
+by the upstream grant itself.
 
 ## brlaser
 
@@ -41,8 +25,9 @@ distribution can be conveyed under GPL-3.0-or-later without any conflict.
 - Vendored commit: `2a49e3287c70c254e7e3ac9dabe9d6a07218c3fa`
 - Location: `vendor/brlaser/`
 
-brlaser implements Brother's proprietary raster command set. This project does
-not reimplement that protocol.
+The vendored tree keeps its upstream notices unchanged; nothing there was
+relicensed. brlaser implements Brother's proprietary raster command set. This
+project does not reimplement that protocol.
 
 ## Local patch
 
@@ -56,10 +41,15 @@ not reimplement that protocol.
 
 Applying the patch to upstream `2a49e328` reproduces `vendor/brlaser/` exactly.
 
+## Generated output
+
+The PPD produced by `ppdc` from `vendor/brlaser/brlaser.drv.in` is derived from
+brlaser and is GPL-2.0-or-later, as is the built `rastertobrlaser` binary.
+
 ## Compliance
 
-If you distribute a built binary, GPL-3.0-or-later requires that you also make the
-corresponding source available, including the patch above. Shipping this
+If you distribute a built binary, GPL-3.0-or-later requires that you also make
+the corresponding source available, including the patch above. Shipping this
 repository alongside the binary satisfies that.
 
 ## Apple and CUPS

@@ -3,3 +3,4 @@ build/
 *.o
 *.dSYM/
 .DS_Store
+brother-dcp-l2520d-*.tar.gz

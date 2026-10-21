@@ -98,6 +98,10 @@ to run through Rosetta, and when Rosetta is missing you get
 This project builds a small, native Apple silicon driver from an open source
 implementation of Brother's printer language, and points your print queue at it.
 
+It also watches the printer and reports paper jams, an open cover, empty paper,
+low toner and a paper-size mismatch, so those show up on the queue in System
+Settings instead of just producing silence.
+
 ## License
 
 GNU General Public License v3.0 or later. See [LICENSE](LICENSE).

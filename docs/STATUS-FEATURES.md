@@ -172,5 +172,20 @@ reads the cache at job start and emits `STATE:` and `ATTR:` lines.
 
 ## Status
 
-Nothing here is implemented. This document records what is feasible and what is
-not, so the work is not attempted against a false assumption about the hardware.
+Implemented, not yet validated on hardware.
+
+Built: `tools/brother-statusd.c` (the poller), the `emit_printer_state()` mapping
+in the filter patch, `cupsIPPReason` localization in the generated PPD, and
+launchd wiring in `install.sh` / `uninstall.sh`.
+
+The mapping logic is covered by `test.sh` against synthetic status files, so the
+code paths are exercised. What has **not** been demonstrated is that this printer
+emits the codes above for a real jam, a real empty tray, or low toner. Those need
+genuine faults to trigger, and the daemon has not yet run against the device.
+
+The two assumptions still to confirm on hardware:
+
+1. That `@PJL INFO STATUS` returns the expected codes while the printer is in
+   each fault state, rather than a vendor-specific value outside this table.
+2. That the daemon does not disturb jobs when it opens the interface between
+   polls.

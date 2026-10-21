@@ -22,6 +22,9 @@ PPD_SRC="$BUILD_DIR/brl2520d.ppd"
 PPD_DEST="$DEST/ppd/brl2520d.ppd"
 BACKUP_DIR="$DEST/backup"
 STATE_FILE="$BACKUP_DIR/queue-$QUEUE.state"
+DAEMON="$DEST/bin/brother-statusd"
+PLIST=/Library/LaunchDaemons/com.4nkitd.brother-statusd.plist
+LABEL=com.4nkitd.brother-statusd
 STAMP=$(date +%Y%m%d-%H%M%S)
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo." >&2; exit 1; }
@@ -32,6 +35,7 @@ say() { echo; echo "== $* =="; }
 say "Preflight"
 
 [ -x "$BUILD_DIR/rastertobrlaser" ] || die "No filter at $BUILD_DIR/rastertobrlaser. Run ./build.sh first."
+[ -x "$BUILD_DIR/brother-statusd" ] || die "No status daemon at $BUILD_DIR/brother-statusd. Run ./build.sh first."
 [ -f "$PPD_SRC" ]          || die "No PPD built. Run ./build.sh first."
 
 archs=$(lipo -archs "$BUILD_DIR/rastertobrlaser")
@@ -79,6 +83,8 @@ fi
 
 changed=no
 rollback() {
+  launchctl bootout "system/$LABEL" 2>/dev/null || true
+  rm -f "$PLIST"
   if [ "$changed" = yes ]; then
     echo "Rolling back queue '$QUEUE'" >&2
     if [ "$created" = 1 ]; then
@@ -93,11 +99,34 @@ trap 'rc=$?; if [ $rc -ne 0 ]; then rollback; fi; exit $rc' EXIT
 
 # ---- install ---------------------------------------------------------------
 
-say "Installing filter"
-mkdir -p "$DEST/filter" "$DEST/ppd"
+say "Installing filter and status daemon"
+mkdir -p "$DEST/filter" "$DEST/ppd" "$DEST/bin"
 install -m 755 "$BUILD_DIR/rastertobrlaser" "$FILTER"
 install -m 644 "$PPD_SRC" "$PPD_DEST"
+install -m 755 "$BUILD_DIR/brother-statusd" "$DAEMON"
 echo "   $FILTER"
+echo "   $DAEMON"
+
+cat > "$PLIST" <<PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$DAEMON</string>
+    <string>DCP-L2520D</string>
+    <string>10</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardErrorPath</key><string>/var/log/brother-statusd.log</string>
+</dict>
+</plist>
+PLISTEOF
+echo "   $PLIST"
 
 say "Configuring queue"
 if [ "$created" = 1 ]; then
@@ -113,6 +142,9 @@ fi
 cupsenable "$QUEUE" || die "cupsenable failed; the queue may be stopped."
 launchctl kickstart -k system/org.cups.cupsd || die "Could not restart cupsd."
 
+launchctl bootout "system/$LABEL" 2>/dev/null || true
+launchctl bootstrap system "$PLIST" || die "Could not load the status daemon."
+
 trap - EXIT
 
 say "Done"
@@ -120,4 +152,5 @@ lpstat -p "$QUEUE"
 echo
 echo "Filter arch: $(lipo -archs "$FILTER")"
 echo "State:       $(grep -m1 STATE "$STATE_FILE" | cut -d= -f2)"
+echo "Daemon:      $(launchctl print "system/$LABEL" >/dev/null 2>&1 && echo loaded || echo 'not loaded')"
 echo "Remove:      sudo ./uninstall.sh"

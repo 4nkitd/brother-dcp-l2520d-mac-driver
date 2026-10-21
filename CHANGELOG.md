@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- `brother-statusd`: polls the printer over USB and writes its PJL status to
+  `/etc/cups/brother-status`.
+- The filter translates that status into CUPS state reasons, so macOS shows
+  `media-jam`, `cover-open`, `offline`, `media-empty`, `toner-empty` and
+  `toner-low`, cleared automatically when the condition goes away.
+- Paper-size mismatch warning: compares the job's media size against the size
+  configured on the printer's panel. This is a setting, not a sensor reading.
+- Status is ignored when the cache is missing or older than two minutes, so a
+  stale file never invents a fault.
+
+Not yet validated against real jams or supplies — see `docs/STATUS-FEATURES.md`.
+
 ## 0.1.0
 
 First release.

@@ -99,7 +99,9 @@ No paper is used.
 
 ## The local patch
 
-`vendor/patches/0001-page-size-detection.patch` changes `build_page_params()`:
+`vendor/patches/0001-page-size-and-status.patch` makes two changes: paper-size
+detection in `build_page_params()`, and printer state reporting in
+`emit_printer_state()`.
 
 - Upstream resolves paper size only from `cupsPageSizeName` and falls back to a
   hardcoded `A4`.
@@ -115,6 +117,45 @@ No paper is used.
 | 288×432 (4×6in) | A4 | A4 |
 
 Applying the patch to upstream `2a49e328` reproduces `vendor/brlaser/` exactly.
+
+## Printer status reporting
+
+`brother-statusd` runs from a LaunchDaemon, opens the USB printer interface for
+a few hundred milliseconds every 10 seconds, and asks:
+
+```
+@PJL INFO STATUS     ->  CODE=10001, ONLINE=TRUE
+@PJL DINQUIRE PAPER  ->  A4
+```
+
+It writes `/etc/cups/brother-status` atomically. The filter reads that file on
+the first page and translates the status code into CUPS state reasons with
+`STATE:` lines, which is what makes macOS show a jam, an open cover, empty paper
+or low toner on the queue:
+
+| Code | Reason |
+| --- | --- |
+| 40022, 40119 | `media-jam-error` |
+| 40021 | `cover-open-error` |
+| 40079, or `ONLINE=FALSE` | `offline-error` |
+| 40010 | `toner-empty-error` |
+| 41213 | `media-empty-error` |
+| 10006, 40038 | `toner-low-warning` |
+
+On top of that the filter compares the job's paper size against `DINQUIRE PAPER`
+and raises `com.brother.media-size-mismatch-warning` when they differ. That is a
+comparison against the size configured on the printer's panel, not a measurement
+— this model has no media sensor.
+
+If the status file is missing or older than 120 seconds, the filter reports
+nothing and clears the reasons it owns. A driver that invents state is worse
+than one that stays quiet.
+
+If the USB interface is busy because cupsd is mid-job, the daemon skips that
+poll rather than competing for the device; the file simply goes stale.
+
+The daemon and its launchd job are installed and removed by `install.sh` and
+`uninstall.sh`.
 
 ## Installer behaviour
 

@@ -22,6 +22,9 @@
 #include <cups/raster.h>
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 #include <functional>
 #include <string>
 #include <array>
@@ -127,6 +130,129 @@ static std::string detect_paper_size(double width, double height) {
       return paper.pjl_name;
   }
   return "";
+}
+
+// ---- printer state reporting ----------------------------------------------
+//
+// brother-statusd polls the printer over USB and writes a small key=value file.
+// We read it here and translate the PJL status code into CUPS state reasons, so
+// macOS can show a jam, an open cover, empty paper or low toner on the queue.
+//
+// Nothing is reported when the file is missing or stale: a driver that invents
+// state is worse than one that stays quiet.
+
+static const char *kDefaultStatusFile = "/etc/cups/brother-status";
+static const long kStatusMaxAge = 120;
+
+struct printer_status {
+  bool present = false;
+  long code = 0;
+  bool online = true;
+  std::string paper;
+  long updated = 0;
+};
+
+struct status_reason {
+  long code;
+  const char *reason;
+  bool error;
+};
+
+static const status_reason kStatusReasons[] = {
+  { 40022, "media-jam",    true  },  // 13 PAPER JAM
+  { 40119, "media-jam",    true  },  // paper misfeed
+  { 40021, "cover-open",   true  },  // close printer cover
+  { 40079, "offline",      true  },  // taken offline / service mode
+  { 40010, "toner-empty",  true  },  // no toner
+  { 41213, "media-empty",  true  },  // no paper (vendor code)
+  { 10006, "toner-low",    false },  // toner low
+  { 40038, "toner-low",    false },  // low toner
+};
+
+static const char *kManagedReasons[] = {
+  "media-jam", "cover-open", "offline", "toner-empty",
+  "media-empty", "toner-low", "com.brother.media-size-mismatch",
+};
+
+static printer_status read_printer_status() {
+  printer_status status;
+
+  const char *path = getenv("BROTHER_STATUS_FILE");
+  if (!path || !*path)
+    path = kDefaultStatusFile;
+
+  FILE *fp = fopen(path, "r");
+  if (!fp)
+    return status;
+
+  char line[256];
+  while (fgets(line, sizeof(line), fp)) {
+    char *eq = strchr(line, '=');
+    if (!eq)
+      continue;
+    *eq = '\0';
+    std::string key(line);
+    std::string value(eq + 1);
+    while (!value.empty() && (value.back() == '\n' || value.back() == '\r'))
+      value.pop_back();
+
+    if (key == "code") {
+      status.code = strtol(value.c_str(), nullptr, 10);
+      status.present = true;
+    } else if (key == "online") {
+      status.online = (value != "0");
+    } else if (key == "paper") {
+      status.paper = value;
+    } else if (key == "updated") {
+      status.updated = strtol(value.c_str(), nullptr, 10);
+    }
+  }
+  fclose(fp);
+  return status;
+}
+
+// Clears both severity variants, then sets the one that applies.
+static void emit_reason(const std::string &reason, bool active, bool error) {
+  fprintf(stderr, "STATE: -%s-warning -%s-error\n", reason.c_str(), reason.c_str());
+  if (active)
+    fprintf(stderr, "STATE: +%s +%s-%s\n", reason.c_str(), reason.c_str(),
+            error ? "error" : "warning");
+}
+
+static void emit_printer_state(const page_params &params) {
+  printer_status status = read_printer_status();
+  long now = (long)time(nullptr);
+  bool fresh = status.present && status.updated > 0
+               && (now - status.updated) <= kStatusMaxAge;
+
+  std::map<std::string, std::pair<bool, bool> > active;
+  for (const char *reason : kManagedReasons)
+    active[reason] = std::make_pair(false, false);
+
+  if (fresh) {
+    for (const auto &known : kStatusReasons) {
+      if (known.code == status.code) {
+        active[known.reason].first = true;
+        active[known.reason].second = known.error;
+      }
+    }
+    if (!status.online) {
+      active["offline"].first = true;
+      active["offline"].second = true;
+    }
+
+    // The printer reports the size configured on its panel, not what is loaded.
+    // Flag the disagreement before the first sheet rather than after 200 of them.
+    if (status.paper.size() >= 2 && !params.papersize.empty()
+        && status.paper != params.papersize) {
+      active["com.brother.media-size-mismatch"].first = true;
+      fprintf(stderr, "INFO: " PACKAGE ": job asks for %s, printer is set to %s\n",
+              params.papersize.c_str(), status.paper.c_str());
+    }
+  }
+
+  for (const auto &entry : active)
+    emit_reason(entry.first, entry.second.first, entry.second.second);
 }
 
 page_params build_page_params(const cups_page_header2_t &header) {
@@ -237,7 +363,10 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "DEBUG: " PACKAGE ": Page header of first page\n");
         dump_page_header(header);
       }
-      job.encode_page(build_page_params(header),
+      page_params params = build_page_params(header);
+      if (job.pages() == 0)
+        emit_printer_state(params);
+      job.encode_page(params,
                       header.cupsHeight,
                       header.cupsBytesPerLine,
                       next_line);

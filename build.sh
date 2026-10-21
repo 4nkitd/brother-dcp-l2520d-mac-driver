@@ -23,6 +23,12 @@ cmake --build out/build --target rastertobrlaser -j"$(sysctl -n hw.ncpu)"
 
 install -m 755 out/build/rastertobrlaser out/rastertobrlaser
 
+# Status poller. Ships alongside the filter; install.sh wires it into launchd.
+mkdir -p out/tools
+clang -O2 -Wall -Wextra -arch "$ARCH" -o out/tools/brother-statusd \
+  tools/brother-statusd.c -framework IOKit -framework CoreFoundation
+install -m 755 out/tools/brother-statusd out/brother-statusd
+
 # Generate the PPD for this model.
 mkdir -p out/ppd
 ppdc -d out/ppd out/build/brlaser.drv
@@ -31,6 +37,14 @@ install -m 644 out/ppd/brl2520d.ppd out/brl2520d.ppd
 # CUPS resolves bare filter names against /usr/libexec/cups/filter.
 # We install under /Library/Printers, so rewrite to an absolute path.
 sed -i '' 's|rastertobrlaser|/Library/Printers/brlaser/filter/rastertobrlaser|' out/brl2520d.ppd
+
+# Let macOS show a readable message for our own state reason. Standard reasons
+# such as media-jam are already localized by the system.
+cat >> out/brl2520d.ppd <<'PPD'
+
+*% Status reasons reported by brother-statusd
+*cupsIPPReason com.brother.media-size-mismatch-warning/Paper size mismatch: "The job asks for a different paper size than the printer is set to."
+PPD
 
 echo
 echo "Built:"

@@ -45,9 +45,15 @@ Refusing to guess. Restore the PPD manually if you need to keep the queue."
     ;;
 esac
 
+say "Stopping status daemon"
+launchctl bootout "system/com.4nkitd.brother-statusd" 2>/dev/null || echo "   daemon not loaded"
+rm -f /Library/LaunchDaemons/com.4nkitd.brother-statusd.plist
+rm -f /etc/cups/brother-status
+echo "   removed launchd job and status cache"
+
 say "Removing installed files"
-rm -rf "$DEST/filter" "$DEST/ppd"
-echo "   removed $DEST/filter and $DEST/ppd"
+rm -rf "$DEST/filter" "$DEST/ppd" "$DEST/bin"
+echo "   removed $DEST/filter, $DEST/ppd and $DEST/bin"
 
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$DEST"

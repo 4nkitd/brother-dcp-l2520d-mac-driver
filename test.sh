@@ -142,5 +142,46 @@ check LETTER    612  792 --int-only
 check A5        420  595 --int-only
 [ "$fail" -eq 0 ] || exit 1
 
+echo "4. Printer status reported as CUPS state reasons"
+./out/tools/mkraster "$WORK/a5.ras" A5 420 595
+NOW=$(date +%s)
+sfail=0
+
+expect_state() {
+  local label="$1" want="$2"; shift 2
+  printf '%s\n' "$@" > "$WORK/status"
+  local out
+  out=$(PPD="$PPD" BROTHER_STATUS_FILE="$WORK/status" "$FILTER" 1 t s 1 "" "$WORK/a5.ras" 2>&1 >/dev/null)
+  if printf '%s\n' "$out" | grep -q "STATE: +.*$want"; then
+    printf "   ok   %-26s -> %s\n" "$label" "$want"
+  else
+    printf "   FAIL %-26s wanted %s\n" "$label" "$want"
+    sfail=1
+  fi
+}
+
+expect_quiet() {
+  local label="$1"; shift
+  printf '%s\n' "$@" > "$WORK/status"
+  local out
+  out=$(PPD="$PPD" BROTHER_STATUS_FILE="$WORK/status" "$FILTER" 1 t s 1 "" "$WORK/a5.ras" 2>&1 >/dev/null)
+  if printf '%s\n' "$out" | grep -q "STATE: +"; then
+    printf "   FAIL %-26s reported state from stale data\n" "$label"
+    sfail=1
+  else
+    printf "   ok   %-26s -> nothing reported\n" "$label"
+  fi
+}
+
+expect_state "paper jam"        "media-jam-error"          "code=40022" "online=1" "paper=A5" "updated=$NOW"
+expect_state "cover open"       "cover-open-error"         "code=40021" "online=1" "paper=A5" "updated=$NOW"
+expect_state "offline"          "offline-error"            "code=10001" "online=0" "paper=A5" "updated=$NOW"
+expect_state "toner low"        "toner-low-warning"        "code=10006" "online=1" "paper=A5" "updated=$NOW"
+expect_state "no paper"         "media-empty-error"        "code=41213" "online=1" "paper=A5" "updated=$NOW"
+expect_state "paper mismatch"   "media-size-mismatch-warning" "code=10001" "online=1" "paper=A4" "updated=$NOW"
+expect_quiet "stale status"     "code=40022" "online=1" "paper=A4" "updated=$((NOW - 600))"
+expect_quiet "no status file"
+[ "$sfail" -eq 0 ] || exit 1
+
 echo
-echo "PASS: encoder round-trip and page-size detection are correct."
+echo "PASS: encoder round-trip, page-size detection and status reporting are correct."
